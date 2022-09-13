@@ -1,9 +1,12 @@
+from pickle import FALSE
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.db.models import Q
 from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.forms import UserCreationForm  
 from django.contrib.auth.models import User
 from django.contrib import messages
+from django.urls import is_valid_path
 
 
 # Create your views here.
@@ -11,9 +14,11 @@ from .models import Room, Topic
 from .roomForm import RoomForm
 
 
+
 def userLogin(req):
+    page = 'login'
     if req.method == "POST":
-        username = req.POST.get('username')
+        username = req.POST.get('username').lower()
         password = req.POST.get('password')
         try:
             user = User.objects.get(username = username)
@@ -25,12 +30,27 @@ def userLogin(req):
             return redirect('home')
         else:
             messages.error(req, "Incorrect password, please try again!")
-    context ={}
+    context ={'page': page}
     return render(req, 'base/login.html', context)
 
 def userLogout(req):
     logout(req)
     return redirect('login')
+
+def userRegister(req):
+    form = UserCreationForm()
+    if req.method == "POST":
+        form = UserCreationForm(req.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.username = user.username.lower()
+            user.save()
+            login(req, user)
+            return redirect('home')
+        else:
+            messages.error(req, "Something went wrong!")
+    context = {'form': form}
+    return render(req, 'base/login.html', context)
 
 def home(req):
     if req.user.is_authenticated:
